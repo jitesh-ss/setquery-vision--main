@@ -1,6 +1,14 @@
 # SatQuery Vision Studio | Multimodal Geospatial & Satellite Vision Assistant
 
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
+[![GitHub Repository](https://img.shields.io/badge/GitHub-Repository-blue?logo=github)](https://github.com/jitesh-ss/setquery-vision--main)
+[![Author](https://img.shields.io/badge/Author-jitesh--ss-brightgreen)](https://github.com/jitesh-ss)
+
 A high-performance geospatial data ingestion, windowing, and multimodal vision analysis studio powered by **Microsoft Planetary Computer STAC**, **Rasterio**, **GDAL**, **PyTorch**, and **FastAPI**.
+
+- **Repository**: [https://github.com/jitesh-ss/setquery-vision--main.git](https://github.com/jitesh-ss/setquery-vision--main.git)
+- **Author**: [jitesh-ss](https://github.com/jitesh-ss)
+- **License**: [MIT](LICENSE)
 
 ---
 
@@ -57,9 +65,13 @@ Spectral PNGs     data/processed/tiles/     Similarity Matrix     data/vectors/f
 
 ## 🛠 Setup & Environment
 
-Virtual environment managed via `uv` with Python 3.11:
+Clone the repository and set up the Python 3.11 environment (managed via `uv`):
 
 ```powershell
+# Clone the repository
+git clone https://github.com/jitesh-ss/setquery-vision--main.git
+cd setquery-vision-main
+
 # Activate virtual environment
 .\.venv\Scripts\Activate.ps1
 ```
@@ -95,3 +107,16 @@ Run the automated integration test suite:
 ```powershell
 .venv\Scripts\python.exe -m unittest tests\test_pipeline.py
 ```
+
+---
+
+## 👤 Author
+
+- **jitesh-ss** - [@jitesh-ss](https://github.com/jitesh-ss)
+- **Repository**: [https://github.com/jitesh-ss/setquery-vision--main.git](https://github.com/jitesh-ss/setquery-vision--main.git)
+
+---
+
+## 📄 License
+
+This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
