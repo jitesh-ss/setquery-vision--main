@@ -1,0 +1,38 @@
+# Environments
+.venv/
+*/.venv/
+env/
+venv/
+ENV/
+
+# Python cache & artifacts
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.pytest_cache/
+.coverage
+htmlcov/
+
+# Geospatial & large raster data
+*.tif
+*.tiff
+*.nc
+*.h5
+*.hdf
+*.tar.gz
+*.zip
+data/
+downloads/
+cache/
+
+# Credentials and secrets
+.env
+*.pem
+credentials.json
+
+# IDE / OS
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db

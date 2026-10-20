@@ -1,0 +1,430 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>SatQuery Vision Studio | Multimodal Geospatial & Satellite Vision Assistant</title>
+  <meta name="description" content="Production-grade Multimodal Geospatial and Satellite Vision Studio powered by Microsoft Planetary Computer STAC, Rasterio, GDAL, and PyTorch.">
+
+  <!-- Modern Typography (Inter, Outfit, JetBrains Mono) -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500;600&family=Outfit:wght@500;600;700;800&display=swap" rel="stylesheet">
+
+  <!-- Leaflet CSS -->
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin=""/>
+
+  <!-- Font Awesome Icons -->
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css"/>
+
+  <!-- Chart.js for Spatial Analytics -->
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+
+  <!-- Custom CSS -->
+  <link rel="stylesheet" href="css/style.css">
+</head>
+<body class="light-theme">
+  <!-- Top Navigation Bar -->
+  <header class="app-header" id="appHeader">
+    <div class="header-left">
+      <div class="brand-logo">
+        <div class="logo-radar">
+          <i class="fa-solid fa-satellite-dish"></i>
+          <span class="pulse-ring"></span>
+        </div>
+        <div class="brand-text">
+          <span class="brand-title">SatQuery <span class="gradient-text">Vision Studio</span></span>
+          <span class="brand-subtitle">Multimodal Geospatial & Satellite Vision Assistant</span>
+        </div>
+      </div>
+      <div class="system-status-pill">
+        <span class="status-dot online"></span>
+        <span class="status-label">STAC Live • GDAL 3.10 • EPSG:32644</span>
+      </div>
+    </div>
+
+    <div class="header-center">
+      <div class="preset-selector">
+        <span class="preset-label"><i class="fa-solid fa-location-crosshairs"></i> AOI Preset:</span>
+        <select id="aoiPresetSelect" class="preset-dropdown">
+          <option value="krishna" selected>Krishna River Basin, AP (Default Scene)</option>
+          <option value="suez">Suez Canal, Egypt</option>
+          <option value="ganges">Ganges Delta, Sundarbans</option>
+          <option value="bayarea">San Francisco Bay, USA</option>
+        </select>
+      </div>
+    </div>
+
+    <div class="header-right">
+      <button class="btn btn-secondary" id="btnThemeToggle" title="Toggle Light / Dark Mode">
+        <i class="fa-solid fa-moon" id="themeIcon"></i>
+        <span id="themeLabel">Dark Mode</span>
+      </button>
+      <button class="btn btn-secondary" id="btnRefreshData" title="Refresh Live Layers">
+        <i class="fa-solid fa-rotate"></i>
+        <span>Refresh</span>
+      </button>
+      <button class="btn btn-secondary" id="btnExportGeoJSON" title="Export RFC 7946 GeoJSON">
+        <i class="fa-solid fa-file-export"></i>
+        <span>Export GeoJSON</span>
+      </button>
+      <button class="btn btn-secondary" id="btnExportCSV" title="Export Feature Analytics CSV">
+        <i class="fa-solid fa-file-csv"></i>
+        <span>Export CSV</span>
+      </button>
+      <button class="btn btn-primary" id="btnRunPipeline" title="Execute Ingestion, Tiling, and Vectorization">
+        <i class="fa-solid fa-play"></i>
+        <span>Run Pipeline</span>
+      </button>
+    </div>
+  </header>
+
+  <!-- Main Application Workspace -->
+  <div class="workspace-container">
+    <!-- Left Sidebar: Controls & Catalog -->
+    <aside class="sidebar-left glass-panel" id="sidebarLeft">
+      <div class="sidebar-tabs">
+        <button class="tab-btn active" data-tab="stacTab" id="tabStacBtn">
+          <i class="fa-solid fa-satellite"></i>
+          <span>STAC Catalog</span>
+        </button>
+        <button class="tab-btn" data-tab="tilesTab" id="tabTilesBtn">
+          <i class="fa-solid fa-border-all"></i>
+          <span>Tiling (512²)</span>
+        </button>
+        <button class="tab-btn" data-tab="layersTab" id="tabLayersBtn">
+          <i class="fa-solid fa-layer-group"></i>
+          <span>Layers</span>
+        </button>
+      </div>
+
+      <!-- Tab 1: STAC Explorer -->
+      <div class="tab-content active" id="stacTab">
+        <div class="panel-section">
+          <div class="section-header">
+            <h3><i class="fa-solid fa-crosshairs"></i> Target Bounding Box</h3>
+            <span class="tag">EPSG:4326</span>
+          </div>
+          <div class="bbox-grid">
+            <div class="input-field">
+              <label>Min Lon (West)</label>
+              <input type="number" step="0.01" id="bboxMinX" value="80.48">
+            </div>
+            <div class="input-field">
+              <label>Min Lat (South)</label>
+              <input type="number" step="0.01" id="bboxMinY" value="16.48">
+            </div>
+            <div class="input-field">
+              <label>Max Lon (East)</label>
+              <input type="number" step="0.01" id="bboxMaxX" value="80.58">
+            </div>
+            <div class="input-field">
+              <label>Max Lat (North)</label>
+              <input type="number" step="0.01" id="bboxMaxY" value="16.56">
+            </div>
+          </div>
+        </div>
+
+        <div class="panel-section">
+          <div class="section-header">
+            <h3><i class="fa-solid fa-cloud"></i> Max Cloud Cover</h3>
+            <span class="badge" id="cloudCoverVal">15%</span>
+          </div>
+          <input type="range" min="1" max="50" value="15" class="slider" id="cloudCoverSlider">
+          <div class="slider-labels">
+            <span>0% (Clear)</span>
+            <span>25%</span>
+            <span>50% (Hazy)</span>
+          </div>
+          <button class="btn btn-full btn-outline" id="btnSearchStac">
+            <i class="fa-solid fa-magnifying-glass"></i>
+            <span>Search Planetary Computer STAC</span>
+          </button>
+        </div>
+
+        <div class="panel-section flex-grow">
+          <div class="section-header">
+            <h3><i class="fa-solid fa-images"></i> Sentinel-2 L2A Scenes</h3>
+            <span class="badge badge-accent" id="sceneCountBadge">3 Scenes</span>
+          </div>
+          <div class="scenes-list" id="stacScenesList">
+            <!-- Populated via JavaScript -->
+          </div>
+        </div>
+      </div>
+
+      <!-- Tab 2: Tiling & Preprocessing -->
+      <div class="tab-content" id="tilesTab">
+        <div class="panel-section">
+          <div class="section-header">
+            <h3><i class="fa-solid fa-sliders"></i> Tiling Configuration</h3>
+            <span class="tag">Stride: 384</span>
+          </div>
+          <div class="tiling-params">
+            <div class="param-row">
+              <span class="param-name">Tile Dimension:</span>
+              <span class="param-val">512 x 512 px</span>
+            </div>
+            <div class="param-row">
+              <span class="param-name">Stride Step:</span>
+              <span class="param-val">384 px (128px overlap)</span>
+            </div>
+            <div class="param-row">
+              <span class="param-name">Affine Transform:</span>
+              <span class="param-val text-success">Preserved Matrix</span>
+            </div>
+          </div>
+          <button class="btn btn-full btn-outline" id="btnReTile">
+            <i class="fa-solid fa-cubes"></i>
+            <span>Re-slice Raster Tiles</span>
+          </button>
+        </div>
+
+        <div class="panel-section flex-grow">
+          <div class="section-header">
+            <h3><i class="fa-solid fa-table-cells"></i> Generated Tiles</h3>
+            <span class="badge badge-accent" id="tilesCountBadge">6 Tiles</span>
+          </div>
+          <div class="tiles-list" id="tilesListContainer">
+            <!-- Populated dynamically -->
+          </div>
+        </div>
+      </div>
+
+      <!-- Tab 3: Layers & Vectors -->
+      <div class="tab-content" id="layersTab">
+        <div class="panel-section">
+          <div class="section-header">
+            <h3><i class="fa-solid fa-eye"></i> Map Layer Visibility</h3>
+          </div>
+          <div class="layer-item">
+            <div class="layer-info">
+              <label class="toggle-switch">
+                <input type="checkbox" id="toggleRaster" checked>
+                <span class="toggle-slider"></span>
+              </label>
+              <span class="layer-title">Sentinel-2 True Color (10m)</span>
+            </div>
+            <div class="layer-opacity-row">
+              <span class="opacity-label">Opacity</span>
+              <input type="range" min="10" max="100" value="90" id="rasterOpacity" class="mini-slider">
+            </div>
+          </div>
+
+          <div class="layer-item">
+            <div class="layer-info">
+              <label class="toggle-switch">
+                <input type="checkbox" id="toggleTileGrid" checked>
+                <span class="toggle-slider"></span>
+              </label>
+              <span class="layer-title">512x512 Tiling Grid Boundaries</span>
+            </div>
+          </div>
+
+          <div class="layer-item">
+            <div class="layer-info">
+              <label class="toggle-switch">
+                <input type="checkbox" id="toggleVectors" checked>
+                <span class="toggle-slider"></span>
+              </label>
+              <span class="layer-title">Vector Polygons (EPSG:4326)</span>
+            </div>
+            <div class="layer-opacity-row">
+              <span class="opacity-label">Opacity</span>
+              <input type="range" min="10" max="100" value="85" id="vectorsOpacity" class="mini-slider">
+            </div>
+          </div>
+        </div>
+
+        <div class="panel-section">
+          <div class="section-header">
+            <h3><i class="fa-solid fa-tags"></i> Semantic Feature Classes</h3>
+          </div>
+          <div class="class-filter-list">
+            <div class="class-pill veg">
+              <span class="color-dot" style="background:#10b981;"></span>
+              <span class="class-name">Dense Vegetation</span>
+              <span class="class-count" id="countVeg">564</span>
+            </div>
+            <div class="class-pill infra">
+              <span class="color-dot" style="background:#f59e0b;"></span>
+              <span class="class-name">Built-up Infrastructure</span>
+              <span class="class-count" id="countInfra">510</span>
+            </div>
+            <div class="class-pill water">
+              <span class="color-dot" style="background:#0284c7;"></span>
+              <span class="class-name">Water Bodies (River)</span>
+              <span class="class-count" id="countWater">67</span>
+            </div>
+          </div>
+        </div>
+
+        <div class="panel-section">
+          <div class="section-header">
+            <h3><i class="fa-solid fa-chart-pie"></i> Land Cover Analytics</h3>
+            <span class="tag" id="chartTotalKm2">94.8 km²</span>
+          </div>
+          <div class="chart-container" style="position: relative; height: 160px; margin-top: 4px;">
+            <canvas id="landCoverChart"></canvas>
+          </div>
+        </div>
+      </div>
+    </aside>
+
+    <!-- Center: Interactive Geospatial Canvas -->
+    <main class="canvas-center">
+      <div id="map" class="leaflet-map-canvas"></div>
+
+      <!-- Floating Spectral Mode Bar -->
+      <div class="spectral-mode-bar glass-panel" id="spectralModeBar">
+        <span class="mode-label"><i class="fa-solid fa-wand-magic-sparkles"></i> Spectral:</span>
+        <button class="mode-chip active" data-mode="true_color"><i class="fa-solid fa-eye"></i> True Color</button>
+        <button class="mode-chip" data-mode="ndvi"><i class="fa-solid fa-seedling"></i> NDVI Vigor</button>
+        <button class="mode-chip" data-mode="ndwi"><i class="fa-solid fa-water"></i> NDWI Water</button>
+        <button class="mode-chip" data-mode="false_color"><i class="fa-solid fa-fire-flame-curved"></i> False Color CIR</button>
+        <button class="mode-chip" data-mode="heat"><i class="fa-solid fa-bolt"></i> Thermal Heat</button>
+      </div>
+
+      <!-- Floating Map Header / Metrics HUD -->
+      <div class="map-hud-bar glass-panel">
+        <div class="hud-stat">
+          <span class="hud-label"><i class="fa-solid fa-chart-area"></i> Analyzed AOI</span>
+          <span class="hud-value" id="hudArea">94.8 km²</span>
+        </div>
+        <div class="hud-divider"></div>
+        <div class="hud-stat">
+          <span class="hud-label"><i class="fa-solid fa-draw-polygon"></i> Polygons</span>
+          <span class="hud-value" id="hudFeatures">1,141</span>
+        </div>
+        <div class="hud-divider"></div>
+        <div class="hud-stat">
+          <span class="hud-label"><i class="fa-solid fa-shapes"></i> Deep Tiles</span>
+          <span class="hud-value" id="hudTiles">6 (512²)</span>
+        </div>
+        <div class="hud-divider"></div>
+        <div class="hud-stat">
+          <span class="hud-label"><i class="fa-solid fa-expand"></i> Resolution</span>
+          <span class="hud-value">10.0 m/px</span>
+        </div>
+      </div>
+
+      <!-- Floating Map Control Dock -->
+      <div class="map-control-dock glass-panel">
+        <button class="dock-btn" id="btnZoomToAOI" title="Fit AOI Extent">
+          <i class="fa-solid fa-expand"></i>
+        </button>
+        <button class="dock-btn" id="btnDrawAOI" title="Draw Custom AOI Bounding Box on Map">
+          <i class="fa-solid fa-vector-square"></i>
+        </button>
+        <button class="dock-btn" id="btnToggleBasemap" title="Switch Basemap (Light / Satellite / Dark)">
+          <i class="fa-solid fa-earth-americas"></i>
+        </button>
+        <button class="dock-btn" id="btnToggleVectorLayer" title="Toggle Vector Outlines">
+          <i class="fa-solid fa-layer-group"></i>
+        </button>
+      </div>
+
+      <!-- Interactive Map Coordinate Readout -->
+      <div class="map-coords-badge glass-panel" id="coordsBadge">
+        <i class="fa-solid fa-location-dot"></i>
+        <span id="coordsDisplay">16.5200° N, 80.5300° E | Zoom 13</span>
+      </div>
+    </main>
+
+    <!-- Right Sidebar: Multimodal AI Satellite Assistant -->
+    <aside class="sidebar-right glass-panel" id="sidebarRight">
+      <div class="assistant-header">
+        <div class="assistant-identity">
+          <div class="assistant-avatar">
+            <i class="fa-solid fa-brain"></i>
+          </div>
+          <div>
+            <h3>AI Satellite Analyst</h3>
+            <span class="assistant-subtitle">Multimodal Spatial Vision Model</span>
+          </div>
+        </div>
+        <button class="btn-icon" id="btnClearChat" title="Reset Conversation">
+          <i class="fa-solid fa-eraser"></i>
+        </button>
+      </div>
+
+      <!-- Quick Prompt Chips -->
+      <div class="prompt-chips-container">
+        <button class="prompt-chip" data-prompt="Analyze the water bodies and Krishna River surface area.">
+          <i class="fa-solid fa-water"></i> River Analysis
+        </button>
+        <button class="prompt-chip" data-prompt="Summarize the vegetation canopy coverage and agricultural health.">
+          <i class="fa-solid fa-seedling"></i> Canopy Coverage
+        </button>
+        <button class="prompt-chip" data-prompt="Inspect infrastructure clusters and built-up areas.">
+          <i class="fa-solid fa-city"></i> Infrastructure
+        </button>
+        <button class="prompt-chip" data-prompt="Explain the 512x512 tiling strategy and Affine transforms.">
+          <i class="fa-solid fa-border-all"></i> Tiling Strategy
+        </button>
+        <button class="prompt-chip" data-prompt="Give me a complete land cover breakdown table.">
+          <i class="fa-solid fa-chart-pie"></i> Land Cover
+        </button>
+      </div>
+
+      <!-- Chat History Area -->
+      <div class="chat-messages" id="chatMessages">
+        <!-- Welcoming Initial Message -->
+        <div class="chat-bubble assistant-bubble">
+          <div class="bubble-header">
+            <span class="sender-name"><i class="fa-solid fa-brain"></i> Satellite Assistant</span>
+            <span class="bubble-time">Live</span>
+          </div>
+          <div class="bubble-content">
+            <p>Welcome! I am your <strong>Multimodal Geospatial & Satellite Vision Assistant</strong>.</p>
+            <p>I have ingested the <strong>Sentinel-2 L2A scene</strong> over the Krishna River basin at 10m resolution, processed <strong>6 overlapping 512x512 tiles</strong>, and extracted <strong>1,141 GeoJSON polygon features</strong>.</p>
+            <p>Click any quick prompt above or ask a custom question regarding hydrological boundaries, canopy density, or spatial transformations!</p>
+          </div>
+        </div>
+      </div>
+
+      <!-- Chat Input Area -->
+      <div class="chat-input-area">
+        <form id="chatForm" class="chat-form">
+          <input type="text" id="chatInput" placeholder="Ask about river area, canopy density, or tiles..." autocomplete="off">
+          <button type="submit" class="btn-send" id="btnSendChat" title="Send Message">
+            <i class="fa-solid fa-arrow-up"></i>
+          </button>
+        </form>
+      </div>
+    </aside>
+  </div>
+
+  <!-- Tile Inspection Modal -->
+  <div class="modal-backdrop" id="tileModal">
+    <div class="modal-card glass-panel">
+      <div class="modal-header">
+        <h3 id="modalTileTitle">Tile Inspection</h3>
+        <button class="btn-icon" id="btnCloseModal"><i class="fa-solid fa-xmark"></i></button>
+      </div>
+      <div class="modal-body">
+        <div class="modal-preview-box">
+          <img id="modalTileImg" src="" alt="Tile Preview">
+        </div>
+        <div class="modal-details-grid" id="modalTileDetails">
+          <!-- Dynamic info -->
+        </div>
+      </div>
+      <div class="modal-vision-section">
+        <div class="section-header" style="margin-bottom: 8px;">
+          <h4><i class="fa-solid fa-brain" style="color: var(--accent-purple);"></i> PyTorch Deep Vision Similarity</h4>
+          <button class="btn btn-outline" id="btnFindSimilarTiles" style="padding: 4px 10px; font-size: 0.75rem;">
+            <i class="fa-solid fa-magnifying-glass"></i> Rank Visually Similar Tiles
+          </button>
+        </div>
+        <div class="similar-tiles-grid" id="similarTilesContainer"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Leaflet JS -->
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
+  <!-- Application JS -->
+  <script src="js/app.js"></script>
+</body>
+</html>
